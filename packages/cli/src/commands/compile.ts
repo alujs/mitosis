@@ -9,6 +9,7 @@ import {
 } from '@builder.io/mitosis'
 import { GluegunCommand } from 'gluegun'
 import { join } from 'path'
+import { getMitosisConfig } from 'src/helpers/get-mitosis-config'
 import { UnionToIntersection } from '../types'
 
 type GeneratorOpts = GeneratorOptions[Target]
@@ -45,20 +46,6 @@ const command: GluegunCommand = {
       plugins.push(compileAwayBuilderComponents())
     }
 
-    const generatorOpts: Partial<{ [K in AllGeneratorOptionKeys]: any }> = {
-      prettier: opts.prettier ?? true,
-      plugins: plugins,
-      format: opts.format,
-      prefix: opts.prefix,
-      includeIds: opts.includeIds,
-      stylesType: opts.styles,
-      stateType: opts.state,
-      reactive: opts.reactive,
-      type: opts.type,
-      vueVersion: opts.vueVersion,
-      cssNamespace: opts.cssNamespace
-    }
-
     // Positional Args
     const paths = parameters.array
 
@@ -71,6 +58,24 @@ const command: GluegunCommand = {
     if (!isTarget(to)) {
       console.error(`no matching output target for "${to}"`)
       process.exit(1)
+    }
+
+    const mitosisConfigGeneratorOpts: GeneratorOpts =
+      getMitosisConfig()?.options[to] || {}
+
+    const generatorOpts: Partial<{ [K in AllGeneratorOptionKeys]: any }> = {
+      prettier: opts.prettier ?? true,
+      plugins: plugins,
+      format: opts.format,
+      prefix: opts.prefix,
+      includeIds: opts.includeIds,
+      stylesType: opts.styles,
+      stateType: opts.state,
+      reactive: opts.reactive,
+      type: opts.type,
+      vueVersion: opts.vueVersion,
+      cssNamespace: opts.cssNamespace,
+      ...mitosisConfigGeneratorOpts
     }
 
     const generator = targets[to]
