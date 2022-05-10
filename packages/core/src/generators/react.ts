@@ -51,6 +51,37 @@ export interface ToReactOptions extends BaseTranspilerOptions {
   type?: 'dom' | 'native';
 }
 
+const reactModalProperties = [
+  'isOpen',
+  'onAfterOpen',
+  'onAfterClose',
+  'onRequestClose',
+  'closeTimeoutMS',
+  'style',
+  'contentLabel',
+  'portalClassName',
+  'overlayClassName',
+  'id',
+  'className',
+  'bodyOpenClassName',
+  'htmlOpenClassName',
+  'ariaHideApp',
+  'shouldFocusAfterRender',
+  'shouldCloseOnOverlayClick',
+  'shouldCloseOnEsc',
+  'shouldReturnFocusAfterClose',
+  'role',
+  'preventScroll',
+  'parentSelector',
+  'aria',
+  'data',
+  'testId',
+  'overlayRef',
+  'contentRef',
+  'overlayElement',
+  'contentElement',
+];
+
 /**
  * If the root Mitosis component only has 1 child, and it is a `Show` node, then we need to wrap it in a fragment.
  * Otherwise, we end up with invalid React render code.
@@ -65,6 +96,23 @@ const wrapInFragment = (json: MitosisComponent | MitosisNode) =>
 const NODE_MAPPERS: {
   [key: string]: (json: MitosisNode, options: ToReactOptions) => string;
 } = {
+  Modal(json, options) {
+    const wrap = wrapInFragment(json);
+    return `<MitosisModal ${reactModalProperties
+      .map((property) => {
+        if (json.bindings[property]) {
+          return `${property}={${processBinding(
+            json.bindings[property] as string,
+            options,
+          )}}`;
+        }
+      })
+      .filter(Boolean)
+      .join('\n')}>${json.children
+      .filter(filterEmptyTextNodes)
+      .map((item) => blockToReact(item, options))
+      .join('\n')}</MitosisModal>`;
+  },
   Fragment(json, options) {
     const wrap = wrapInFragment(json);
     return `${wrap ? '<>' : ''}${json.children
@@ -390,6 +438,15 @@ const DEFAULT_OPTIONS: ToReactOptions = {
   stylesType: 'styled-jsx',
 };
 
+export const hasModal = (json: MitosisComponent) => {
+  return traverse(json).reduce((acc, node) => {
+    if (node?.name === 'Modal') {
+      acc = true;
+    }
+    return acc;
+  }, false);
+};
+
 export const componentToReact =
   (reactOptions: ToReactOptions = {}): Transpiler =>
   ({ component }) => {
@@ -457,6 +514,8 @@ const _componentToReact = (
   const refs = getRefs(json);
   let hasState = Boolean(Object.keys(json.state).length);
 
+  const usesModals = hasModal(json);
+
   mapRefs(json, (refName) => `${refName}.current`);
 
   const stylesType = options.stylesType || 'emotion';
@@ -521,6 +580,7 @@ const _componentToReact = (
   import { View, StyleSheet, Image, Text } from 'react-native';
   `
   }
+  ${usesModals ? `import ReactModal from 'react-modal';` : ''}
   ${styledComponentsCode ? `import styled from 'styled-components';\n` : ''}
   ${
     reactLibImports.size
@@ -549,6 +609,15 @@ const _componentToReact = (
         : ''
     }
     ${renderPreComponent(json)}
+
+    ${
+      usesModals
+        ? `const MitosisModal = props => {
+  const { isOpen } = props;
+  return isOpen ? <ReactModal {...props} /> : null;
+};`
+        : ''
+    }
 
     ${isSubComponent ? '' : 'export default '}function ${
     json.name || 'MyComponent'
