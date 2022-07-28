@@ -143,6 +143,10 @@ const SHOW_TESTS: Tests = {
   showWithFor: require('./data/show/show-with-for.raw'),
 };
 
+const ON_UPDATE_RETURN: Tests = {
+  basicOnUpdateReturn: require('./data/basic-onUpdate-return.raw'),
+};
+
 const TESTS_FOR_TARGET: Partial<Record<Target, Tests[]>> = {
   react: [
     BASIC_TESTS,
@@ -152,6 +156,7 @@ const TESTS_FOR_TARGET: Partial<Record<Target, Tests[]>> = {
     MULTI_ON_UPDATE_TESTS,
     FORM_BLOCK_TESTS,
     // FOR_SHOW_TESTS,
+    ON_UPDATE_RETURN,
   ],
   angular: [
     BASIC_TESTS,
